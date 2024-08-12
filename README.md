@@ -19,6 +19,7 @@ it is recommended to use a compound assignment operator to apply edits directly 
 ```cs
 DataStorageElement elem = session.DataStorage[Scope.Slot, "MyData"];
 elem.Initialize(0);
+// This will never make it to the server
 elem += 2;
 ```
 
@@ -26,5 +27,6 @@ elem += 2;
 
 ```cs
 session.DataStorage[Scope.Slot, "MyData"].Initialize(0);
+// This will make it to the server
 session.DataStorage[Scope.Slot, "MyData"] += 2;
 ```
