@@ -16,7 +16,7 @@ namespace Archipelago.MultiClient.Net.Analyzers
             category: "Usage",
             defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            helpLinkUri: "https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient001-datastorageelementassignedoutsideofdatastoragehelper"
+            helpLinkUri: "https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient001---datastorageelement-assigned-outside-of-datastoragehelper"
         );
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [
