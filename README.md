@@ -1,0 +1,1 @@
+# Archipelago.MultiClient.Net.Analyzers
