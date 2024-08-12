@@ -11,14 +11,12 @@ namespace Archipelago.MultiClient.Net.Analyzers
     {
         private static readonly DiagnosticDescriptor NoElementsAssignedOutsideDataStorageHelper = new(
             id: Constants.DiagnosticPrefix + "001",
-            title: "Data storage element assigned outside of data storage",
-            messageFormat: "Data storage element assigned outside of data storage",
+            title: "DataStorageElement assigned outside of DataStorageHelper",
+            messageFormat: "DataStorageElement assigned outside of DataStorageHelper",
             category: "Usage",
             defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            description: "Data storage operations are generally only sent to the server when reassigning data storage elements to " +
-                         "the data storage helper. To prevent bugs, it is best to avoid assigning data storage elements other than " +
-                         "to the data storage helper, e.g. to variables."
+            helpLinkUri: "https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient001-datastorageelementassignedoutsideofdatastoragehelper"
         );
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [

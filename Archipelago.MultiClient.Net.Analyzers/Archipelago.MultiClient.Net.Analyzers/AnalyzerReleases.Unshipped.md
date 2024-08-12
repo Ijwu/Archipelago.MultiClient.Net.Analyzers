@@ -5,4 +5,4 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-MULTICLIENT001 | Usage | Warning | DataStorageDiagnostics
+MULTICLIENT001 | Usage | Warning | DataStorageDiagnostics, [Documentation](https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient001-datastorageelementassignedoutsideofdatastoragehelper)

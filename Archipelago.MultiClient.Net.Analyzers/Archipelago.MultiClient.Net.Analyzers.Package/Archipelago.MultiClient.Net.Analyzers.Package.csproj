@@ -11,12 +11,13 @@
     <PackageId>Archipelago.MultiClient.Net.Analyzers</PackageId>
     <PackageVersion>1.0.0.0</PackageVersion>
     <Authors>BadMagic</Authors>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>http://REPOSITORY_URL_HERE_OR_DELETE_THIS_LINE</RepositoryUrl>
+    <RepositoryUrl>https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers</RepositoryUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Archipelago.MultiClient.Net.Analyzers</Description>
     <Copyright>Copyright BadMagic 2024</Copyright>
-    <PackageTags>Archipelago.MultiClient.Net.Analyzers, analyzers</PackageTags>
+    <PackageTags>archipelago, analyzers</PackageTags>
     <DevelopmentDependency>true</DevelopmentDependency>
     <NoPackageAnalysis>true</NoPackageAnalysis>
 
@@ -28,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="tools\*.ps1" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="" />
+      <None Include="../../README.md" Pack="true" PackagePath="README.md"/>
   </ItemGroup>
 
   <Target Name="_AddAnalyzersToOutput">
