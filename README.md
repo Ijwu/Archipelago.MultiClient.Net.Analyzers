@@ -14,6 +14,9 @@ is re-assigned back to the `DataStorageHelper`. This means that storing a `DataS
 cause undesirable side effects on the element, as well as prevent it from being sent to the server at all. Instead,
 it is recommended to use a compound assignment operator to apply edits directly to the `DataStorageHelper`.
 
+This analyzer also offers a corresponding fix action "Make DataStorage access inline" on variable declarations, which
+will remove the offending declaration and inline it at all usage sites.
+
 **Incorrect Code:**
 
 ```cs

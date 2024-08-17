@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Archipelago.MultiClient.Net.Analyzers.Util;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -52,16 +53,24 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
             if (context.Node is LocalDeclarationStatementSyntax lds)
             {
                 ITypeSymbol? type = context.SemanticModel.GetTypeInfo(lds.Declaration.Type).Type;
-                if (!IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
+                if (!DataStorageUtils.IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
                 {
                     return;
+                }
+                // put a diagnostic on each initializer
+                foreach (VariableDeclaratorSyntax v in lds.Declaration.Variables)
+                {
+                    if (v.Initializer != null)
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(NoElementsAssignedOutsideDataStorageHelper, v.GetLocation()));
+                    }
                 }
             }
             else
             {
                 AssignmentExpressionSyntax node = (AssignmentExpressionSyntax)context.Node;
                 ITypeSymbol? type = context.SemanticModel.GetTypeInfo(node.Left).Type;
-                if (!IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
+                if (!DataStorageUtils.IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
                 {
                     return;
                 }
@@ -69,29 +78,13 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
                 {
                     // inline reassignments to DataStorageHelper are fine and expected
                     SymbolInfo symbol = context.SemanticModel.GetSymbolInfo(node.Left);
-                    if (symbol.Symbol is IPropertySymbol ips && IsTypeDataStorageHelper(ips.ContainingType, context.SemanticModel.Compilation))
+                    if (symbol.Symbol is IPropertySymbol ips && DataStorageUtils.IsTypeDataStorageHelper(ips.ContainingType, context.SemanticModel.Compilation))
                     {
                         return;
                     }
                 }
+                context.ReportDiagnostic(Diagnostic.Create(NoElementsAssignedOutsideDataStorageHelper, context.Node.GetLocation()));
             }
-
-            context.ReportDiagnostic(Diagnostic.Create(NoElementsAssignedOutsideDataStorageHelper, context.Node.GetLocation()));
-        }
-
-        private bool IsTypeDataStorageElement(ITypeSymbol? type, Compilation compilation)
-        {
-            INamedTypeSymbol? dataStorageElement = compilation.GetTypeByMetadataName("Archipelago.MultiClient.Net.Models.DataStorageElement");
-            return type != null && dataStorageElement != null && dataStorageElement.Equals(type, SymbolEqualityComparer.Default);
-        }
-
-        internal static bool IsTypeDataStorageHelper(ITypeSymbol? type, Compilation compilation)
-        {
-            INamedTypeSymbol? iDataStorageHelper = compilation.GetTypeByMetadataName("Archipelago.MultiClient.Net.Helpers.IDataStorageHelper");
-            return type != null && iDataStorageHelper != null && (
-                iDataStorageHelper.Equals(type, SymbolEqualityComparer.Default)
-                || type.AllInterfaces.Contains(iDataStorageHelper, SymbolEqualityComparer.Default)
-            );
         }
     }
 }

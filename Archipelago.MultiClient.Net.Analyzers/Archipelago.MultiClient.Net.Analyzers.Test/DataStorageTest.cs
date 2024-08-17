@@ -41,7 +41,7 @@ namespace MyClient
     }
 }";
 
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 13, 16, 86);
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 32, 16, 85);
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
         }
 
@@ -159,7 +159,33 @@ namespace MyClient
         }
 
         [TestMethod]
-        public async Task VerifyFixableDiagnostic()
+        public async Task VerifyHarmlessDeclarationYieldsNoDiagnostic()
+        {
+            string test = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    class MyClass
+    {   
+        private ArchipelagoSession session;
+
+        public void Initialize()
+        {
+            DataStorageElement myElement;
+        }
+    }
+}";
+
+            await VerifyCS.VerifyAnalyzerAsync(test);
+        }
+
+        [TestMethod]
+        public async Task VerifyFixWithSingleDeclaration()
         {
             string test = @"
 using System;
@@ -177,6 +203,7 @@ namespace MyClient
         public void Initialize()
         {
             DataStorageElement myElement = session.DataStorage[Scope.Slot, ""MyData""];
+            myElement.Initialize(0);
             myElement += Operation.Update(new Dictionary<string, bool>()
             {
                 [""key1""] = true
@@ -199,7 +226,7 @@ namespace MyClient
 
         public void Initialize()
         {
-            DataStorageElement myElement = session.DataStorage[Scope.Slot, ""MyData""];
+            session.DataStorage[Scope.Slot, ""MyData""].Initialize(0);
             session.DataStorage[Scope.Slot, ""MyData""] += Operation.Update(new Dictionary<string, bool>()
             {
                 [""key1""] = true
@@ -207,9 +234,65 @@ namespace MyClient
         }
     }
 }";
-            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 13, 16, 86);
-            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(17, 13, 20, 15);
-            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest, [expected1]);
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 32, 16, 85);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(18, 13, 21, 15);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
+        }
+
+        [TestMethod]
+        public async Task VerifyFixWithMultiDeclaration()
+        {
+            string test = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    class MyClass
+    {   
+        private ArchipelagoSession session;
+
+        public void Initialize()
+        {
+            DataStorageElement myElement = session.DataStorage[Scope.Slot, ""MyData""], myOtherElement;
+            myElement.Initialize(0);
+            myElement += Operation.Update(new Dictionary<string, bool>()
+            {
+                [""key1""] = true
+            });
+        }
+    }
+}";
+            string fixTest = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    class MyClass
+    {   
+        private ArchipelagoSession session;
+
+        public void Initialize()
+        {
+            DataStorageElement myOtherElement;
+            session.DataStorage[Scope.Slot, ""MyData""].Initialize(0);
+            session.DataStorage[Scope.Slot, ""MyData""] += Operation.Update(new Dictionary<string, bool>()
+            {
+                [""key1""] = true
+            });
+        }
+    }
+}";
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 32, 16, 85);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(18, 13, 21, 15);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
         }
     }
 }
