@@ -17,6 +17,7 @@ it is recommended to use a compound assignment operator to apply edits directly 
 **Incorrect Code:**
 
 ```cs
+// MULTICLIENT001
 DataStorageElement elem = session.DataStorage[Scope.Slot, "MyData"];
 elem.Initialize(0);
 // This will never make it to the server

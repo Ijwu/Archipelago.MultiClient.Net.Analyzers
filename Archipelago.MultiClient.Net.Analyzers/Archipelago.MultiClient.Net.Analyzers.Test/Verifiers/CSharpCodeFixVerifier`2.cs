@@ -56,5 +56,19 @@ namespace Archipelago.MultiClient.Net.Analyzers.Test
             test.ExpectedDiagnostics.AddRange(expected);
             await test.RunAsync(CancellationToken.None);
         }
+
+        public static async Task VerifyCodeFixAsync(string source, DiagnosticResult[] expected, string fixedSource, DiagnosticResult[] fixedExpected)
+        {
+            var test = new Test
+            {
+                TestCode = source,
+                FixedCode = fixedSource,
+            };
+
+            test.ExpectedDiagnostics.AddRange(expected);
+            test.FixedState.ExpectedDiagnostics.Clear();
+            test.FixedState.ExpectedDiagnostics.AddRange(fixedExpected);
+            await test.RunAsync(CancellationToken.None);
+        }
     }
 }

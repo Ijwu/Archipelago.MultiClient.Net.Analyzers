@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 
-namespace Archipelago.MultiClient.Net.Analyzers
+namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class DataStorageDiagnostics : DiagnosticAnalyzer
@@ -85,7 +85,7 @@ namespace Archipelago.MultiClient.Net.Analyzers
             return type != null && dataStorageElement != null && dataStorageElement.Equals(type, SymbolEqualityComparer.Default);
         }
 
-        private bool IsTypeDataStorageHelper(ITypeSymbol? type, Compilation compilation)
+        internal static bool IsTypeDataStorageHelper(ITypeSymbol? type, Compilation compilation)
         {
             INamedTypeSymbol? iDataStorageHelper = compilation.GetTypeByMetadataName("Archipelago.MultiClient.Net.Helpers.IDataStorageHelper");
             return type != null && iDataStorageHelper != null && (
