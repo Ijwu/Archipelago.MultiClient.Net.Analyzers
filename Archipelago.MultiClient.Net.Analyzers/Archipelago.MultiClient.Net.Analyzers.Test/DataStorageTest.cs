@@ -36,12 +36,12 @@ namespace MyClient
 
         public void Initialize()
         {
-            DataStorageElement myElement = session.DataStorage[Scope.Slot, ""MyData""];
+            DataStorageElement {|#0:myElement = session.DataStorage[Scope.Slot, ""MyData""]|};
         }
     }
 }";
 
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 32, 16, 85);
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
         }
 
@@ -90,15 +90,15 @@ namespace MyClient
 
         public void Initialize()
         {
-            myElement += Operation.Update(new Dictionary<string, bool>()
+            {|#0:myElement += Operation.Update(new Dictionary<string, bool>()
             {
                 [""key1""] = true
-            });
+            })|};
         }
     }
 }";
 
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(17, 13, 20, 15);
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
         }
 
@@ -202,12 +202,12 @@ namespace MyClient
 
         public void Initialize()
         {
-            DataStorageElement myElement = session.DataStorage[Scope.Slot, ""MyData""];
+            DataStorageElement {|#0:myElement = session.DataStorage[Scope.Slot, ""MyData""]|};
             myElement.Initialize(0);
-            myElement += Operation.Update(new Dictionary<string, bool>()
+            {|#1:myElement += Operation.Update(new Dictionary<string, bool>()
             {
                 [""key1""] = true
-            });
+            })|};
         }
     }
 }";
@@ -234,8 +234,8 @@ namespace MyClient
         }
     }
 }";
-            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 32, 16, 85);
-            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(18, 13, 21, 15);
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(1);
             await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
         }
 
@@ -257,12 +257,12 @@ namespace MyClient
 
         public void Initialize()
         {
-            DataStorageElement myElement = session.DataStorage[Scope.Slot, ""MyData""], myOtherElement;
+            DataStorageElement {|#0:myElement = session.DataStorage[Scope.Slot, ""MyData""]|}, myOtherElement;
             myElement.Initialize(0);
-            myElement += Operation.Update(new Dictionary<string, bool>()
+            {|#1:myElement += Operation.Update(new Dictionary<string, bool>()
             {
                 [""key1""] = true
-            });
+            })|};
         }
     }
 }";
@@ -290,8 +290,8 @@ namespace MyClient
         }
     }
 }";
-            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(16, 32, 16, 85);
-            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithSpan(18, 13, 21, 15);
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(1);
             await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
         }
     }
