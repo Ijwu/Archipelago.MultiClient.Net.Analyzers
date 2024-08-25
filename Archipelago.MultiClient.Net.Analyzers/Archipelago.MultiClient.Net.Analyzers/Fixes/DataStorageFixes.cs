@@ -56,7 +56,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
             SymbolInfo initializerInfo = semanticModel.GetSymbolInfo(declarator.Initializer.Value);
             if (initializerInfo.Symbol is not IPropertySymbol ips 
-                || !DataStorageUtils.IsTypeDataStorageHelper(ips.ContainingType, semanticModel.Compilation)
+                || !ArchipelagoTypeUtils.IsTypeDataStorageHelper(ips.ContainingType, semanticModel.Compilation)
                 || semanticModel.GetDeclaredSymbol(declarator) is not ISymbol symbol)
             {
                 return;

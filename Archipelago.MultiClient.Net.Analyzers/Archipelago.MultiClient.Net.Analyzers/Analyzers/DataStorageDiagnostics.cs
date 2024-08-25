@@ -1,9 +1,11 @@
-﻿using Archipelago.MultiClient.Net.Analyzers.Util;
+﻿using Archipelago.MultiClient.Net.Analyzers.Generators;
+using Archipelago.MultiClient.Net.Analyzers.Util;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
 {
@@ -49,11 +51,12 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
         private void AnalyzeAssignment(SyntaxNodeAnalysisContext context)
         {
             INamedTypeSymbol? wantedType = context.SemanticModel.Compilation.GetTypeByMetadataName("Archipelago.MultiClient.Net.Models.DataStorageElement");
+            INamedTypeSymbol? generatedCodeAttribute = context.SemanticModel.Compilation.GetTypeByMetadataName("System.CodeDom.Compiler.GeneratedCodeAttribute");
 
             if (context.Node is LocalDeclarationStatementSyntax lds)
             {
                 ITypeSymbol? type = context.SemanticModel.GetTypeInfo(lds.Declaration.Type).Type;
-                if (!DataStorageUtils.IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
+                if (!ArchipelagoTypeUtils.IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
                 {
                     return;
                 }
@@ -70,15 +73,27 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
             {
                 AssignmentExpressionSyntax node = (AssignmentExpressionSyntax)context.Node;
                 ITypeSymbol? type = context.SemanticModel.GetTypeInfo(node.Left).Type;
-                if (!DataStorageUtils.IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
+                if (!ArchipelagoTypeUtils.IsTypeDataStorageElement(type, context.SemanticModel.Compilation))
                 {
                     return;
                 }
-                if (node.Left.IsKind(SyntaxKind.ElementAccessExpression))
+                if (context.SemanticModel.GetSymbolInfo(node.Left).Symbol is IPropertySymbol ips)
                 {
-                    // inline reassignments to DataStorageHelper are fine and expected
-                    SymbolInfo symbol = context.SemanticModel.GetSymbolInfo(node.Left);
-                    if (symbol.Symbol is IPropertySymbol ips && DataStorageUtils.IsTypeDataStorageHelper(ips.ContainingType, context.SemanticModel.Compilation))
+                    // checks for expected/acceptable inline reassignments to properties
+
+                    // Assignments to DataStorageHelper
+                    if (node.Left.IsKind(SyntaxKind.ElementAccessExpression) 
+                        && ArchipelagoTypeUtils.IsTypeDataStorageHelper(ips.ContainingType, context.SemanticModel.Compilation))
+                    {
+                        return;
+                    }
+
+                    // Assignments to DataStoragePropertyGenerator-generated properties
+                    AttributeData? generatedCodeData = ips.GetAttributes()
+                        .FirstOrDefault(ad => ad.AttributeClass != null 
+                            && ad.AttributeClass.Equals(generatedCodeAttribute, SymbolEqualityComparer.Default));
+                    string? toolName = generatedCodeData?.ConstructorArguments[0].Value as string;
+                    if (toolName == nameof(DataStoragePropertyGenerator))
                     {
                         return;
                     }
