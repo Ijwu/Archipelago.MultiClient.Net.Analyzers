@@ -163,9 +163,12 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
             // make the field backing the property (with annotation).
             SyntaxNode sessionNode = oldRoot.FindNode(sessionSymbol.Locations[0].SourceSpan);
-            SyntaxNode newFieldNode = ArchipelagoSyntaxFactory.CreateDataStorageProperty(fieldName,
+            SyntaxNode newFieldNode = ArchipelagoSyntaxFactory.CreateDataStorageProperty(
+                editor.Generator,
+                fieldName,
                 sessionSymbol.Name, 
-                dataStorageAccessArguments).WithAdditionalAnnotations(Formatter.Annotation);
+                dataStorageAccessArguments
+            ).WithAdditionalAnnotations(Formatter.Annotation);
 
             editor.InsertAfter(sessionNode, newFieldNode.WithTriviaFrom(sessionNode));
 
