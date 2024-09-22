@@ -35,6 +35,30 @@ session.DataStorage[Scope.Slot, "MyData"].Initialize(0);
 session.DataStorage[Scope.Slot, "MyData"] += 2;
 ```
 
+### MULTICLIENT002 - Use HasFlag when comparing ItemFlags
+
+This warning is intended to prevent bugs when comparing `ItemFlags`. Because item classification is a flag,
+an item might have multiple flag values set, such as `ItemFlags.Advancement | ItemFlags.Trap`. In such scenarios,
+a comparison like `item.Flags == ItemFlags.Advancement` does not capture the programmer's intent ("is this item
+a progression item"). Instead, `HasFlag` should be used to perform the comparison. `ItemFlags.Filler` is exempt
+from this rule because it has the value 0 and `HasFlag(0)` always returns true.
+
+This analyzer also offers a corresponding fix action "Use HasFlag" on offending comparisons that contain a constant
+on exactly one side of the comparison. These comparisons will be replaced with a matching `HasFlag` check.
+
+**Incorrect Code:**
+
+```cs
+// MULTICLIENT002
+return item.Flags == ItemFlags.Advancement;
+```
+
+**Fixed Code:**
+
+```cs
+return item.Flags.HasFlag(ItemFlags.Advancement);
+```
+
 ## Source Generators
 
 ### Data Storage Properties

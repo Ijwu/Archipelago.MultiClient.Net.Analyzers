@@ -50,7 +50,6 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
 
         private void AnalyzeAssignment(SyntaxNodeAnalysisContext context)
         {
-            INamedTypeSymbol? wantedType = context.SemanticModel.Compilation.GetTypeByMetadataName("Archipelago.MultiClient.Net.Models.DataStorageElement");
             INamedTypeSymbol? generatedCodeAttribute = context.SemanticModel.Compilation.GetTypeByMetadataName("System.CodeDom.Compiler.GeneratedCodeAttribute");
 
             if (context.Node is LocalDeclarationStatementSyntax lds)

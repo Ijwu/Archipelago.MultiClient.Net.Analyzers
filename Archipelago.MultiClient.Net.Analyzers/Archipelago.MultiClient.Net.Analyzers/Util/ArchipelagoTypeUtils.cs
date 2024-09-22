@@ -19,6 +19,11 @@ namespace Archipelago.MultiClient.Net.Analyzers.Util
             return IsTypeDesiredTypeOrInterface("Archipelago.MultiClient.Net.Helpers.IDataStorageHelper", type, compilation);
         }
 
+        public static bool IsTypeItemFlags(ITypeSymbol? type, Compilation compilation)
+        {
+            return IsTypeDesiredType("Archipelago.MultiClient.Net.Enums.ItemFlags", type, compilation);
+        }
+
         private static bool IsTypeDesiredType(string checkTypeFullName, ITypeSymbol? type, Compilation compilation)
         {
             INamedTypeSymbol? checkType = compilation.GetTypeByMetadataName(checkTypeFullName);
