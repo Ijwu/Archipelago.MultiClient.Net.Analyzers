@@ -2,7 +2,7 @@
 
 namespace Archipelago.MultiClient.Net.Analyzers.Util
 {
-    internal class ArchipelagoTypeUtils
+    internal static class ArchipelagoTypeUtils
     {
         public static bool IsTypeArchipelagoSession(ITypeSymbol? type, Compilation compilation)
         {

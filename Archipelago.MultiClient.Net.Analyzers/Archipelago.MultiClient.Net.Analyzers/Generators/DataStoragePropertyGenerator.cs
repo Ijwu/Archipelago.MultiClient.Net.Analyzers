@@ -35,8 +35,7 @@ namespace {container.ContainingType.ContainingNamespace.ToDisplayString()}
                 
                 foreach (DataStorageField field in container.Fields)
                 {
-                    string propName = field.Field.Name.Trim('_');
-                    propName = char.ToUpper(propName[0]) + propName[1..];
+                    string propName = GeneratePropName(field.Field.Name);
                     ImmutableArray<TypedConstant> args = field.Data.ConstructorArguments;
                     string referenceText;
                     if (args.Length == 2)
@@ -64,6 +63,13 @@ namespace {container.ContainingType.ContainingNamespace.ToDisplayString()}
 }".TrimStart('\r', '\n'));
                 context.AddSource(container.ContainingType.Name + ".g.cs", SourceText.From(source.ToString(), Encoding.UTF8));
             }
+        }
+
+        public static string GeneratePropName(string fieldName)
+        {
+            string propName = fieldName.Trim('_');
+            propName = char.ToUpper(propName[0]) + propName[1..];
+            return propName;
         }
     }
 }

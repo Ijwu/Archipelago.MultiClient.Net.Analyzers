@@ -1,4 +1,5 @@
-﻿using Archipelago.MultiClient.Net.Analyzers.Generators;
+﻿using Archipelago.MultiClient.Net.Analyzers.Fixes;
+using Archipelago.MultiClient.Net.Analyzers.Generators;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
@@ -258,7 +259,7 @@ namespace MyClient
         }
 
         [TestMethod]
-        public async Task VerifyFixWithSingleDeclaration()
+        public async Task VerifyFixInlineWithSingleDeclaration()
         {
             string test = @"
 using System;
@@ -313,7 +314,7 @@ namespace MyClient
         }
 
         [TestMethod]
-        public async Task VerifyFixWithMultiDeclaration()
+        public async Task VerifyFixInlineWithMultiDeclaration()
         {
             string test = @"
 using System;
@@ -366,6 +367,119 @@ namespace MyClient
             DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
             DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(1);
             await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
+        }
+
+        [TestMethod]
+        public async Task VerifyFixPropertyWithSingleDeclaration()
+        {
+            string test = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    partial class MyClass
+    {   
+        private ArchipelagoSession session;
+
+        public void Initialize()
+        {
+            DataStorageElement {|#0:myElement = session.DataStorage[Scope.Slot, ""MyData""]|};
+            myElement.Initialize(0);
+            {|#1:myElement += Operation.Update(new Dictionary<string, bool>()
+            {
+                [""key1""] = true
+            })|};
+        }
+    }
+}";
+            string fixTest = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    partial class MyClass
+    {   
+        private ArchipelagoSession session;
+        [DataStorageProperty(nameof(session), Scope.Slot, ""MyData"")]
+        private readonly DataStorageElement _myElement;
+        public void Initialize()
+        {
+            MyElement.Initialize(0);
+            MyElement += Operation.Update(new Dictionary<string, bool>()
+            {
+                [""key1""] = true
+            });
+        }
+    }
+}";
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(1);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest, DataStorageFixes.FixKeyMakeDataStorageProperty);
+        }
+
+        [TestMethod]
+        public async Task VerifyFixPropertyWithPropertySessionAndNonPartialClass()
+        {
+            string test = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    public class MyClass
+    {   
+        private ArchipelagoSession Session { get; set; }
+
+        public void Initialize()
+        {
+            DataStorageElement {|#0:myElement = Session.DataStorage[Scope.Slot, ""MyData""]|};
+            myElement.Initialize(0);
+            {|#1:myElement += Operation.Update(new Dictionary<string, bool>()
+            {
+                [""key1""] = true
+            })|};
+        }
+    }
+}";
+            string fixTest = @"
+using System;
+using System.Collections.Generic;
+using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.Enums;
+using Archipelago.MultiClient.Net.Models;
+
+namespace MyClient
+{
+    public partial class MyClass
+    {   
+        private ArchipelagoSession Session { get; set; }
+        [DataStorageProperty(nameof(Session), Scope.Slot, ""MyData"")]
+        private readonly DataStorageElement _myElement;
+
+        public void Initialize()
+        {
+            MyElement.Initialize(0);
+            MyElement += Operation.Update(new Dictionary<string, bool>()
+            {
+                [""key1""] = true
+            });
+        }
+    }
+}";
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(0);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT001").WithLocation(1);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest, DataStorageFixes.FixKeyMakeDataStorageProperty);
         }
     }
 }
