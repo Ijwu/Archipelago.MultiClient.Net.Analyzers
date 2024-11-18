@@ -59,38 +59,6 @@ return item.Flags == ItemFlags.Advancement;
 return item.Flags.HasFlag(ItemFlags.Advancement);
 ```
 
-## Source Generators
-
-### Data Storage Properties
-
-Due to the verbosity of `DataStorageHelper`'s API, it is commonly desirable to assign a `DataStorageElement` to a variable 
-for repeated access. Unfortunately, this does not work for most use cases, and there is [an analyzer](#multiclient001---datastorageelement-assigned-outside-of-datastoragehelper)
-to prevent misuse of the API. This package offers a source generator to create a thin wrapper around the data storage API
-which is also considered an acceptable use by the MULTICLIENT001 analyzer. Note in the example below that you must have a
-session defined in a scope that is available to members of the containing class - again, this is only a thin wrapper so you
-have bring your own session.
-
-**Example Usage:**
-
-```cs
-partial class MyClass
-{
-	private ArchipelagoSession session;
-
-	[DataStorageProperty(nameof(session), Scope.Slot, "MyScopedData")]
-	private readonly DataStorageElement _myScopedData;
-
-	[DataStorageProperty(nameof(session), "MyGlobalData")]
-	private readonly DataStorageElement _myGlobalData;
-
-	public void DoStuff()
-	{
-		MyScopedData.Initialize(0);
-		MyGlobalData += 2;
-	}
-}
-```
-
 ### MULTICLIENT003 - Avoid using switch statements with ItemFlags
 
 This warning is intended to prevent bugs when comparing `ItemFlags`. Because item classification is a flag,
