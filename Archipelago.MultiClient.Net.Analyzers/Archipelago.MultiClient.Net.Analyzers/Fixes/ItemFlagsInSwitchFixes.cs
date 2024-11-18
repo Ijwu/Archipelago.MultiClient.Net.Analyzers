@@ -45,13 +45,6 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                 return;
             }
 
-            SemanticModel? semanticModel = await context.Document.GetSemanticModelAsync(context.CancellationToken)
-                .ConfigureAwait(false);
-            if (semanticModel == null)
-            {
-                return;
-            }
-
             List<SyntaxNode> caseTargets = new();
             foreach (SwitchSectionSyntax switchSection in switchStatement.Sections)
             {
