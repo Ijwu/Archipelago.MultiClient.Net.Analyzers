@@ -77,7 +77,7 @@ on exactly one side of the comparison. These comparisons will be replaced with a
 ItemFlags itemFlag = ItemFlags.Advancement | ItemFlags.Trap;
 switch (itemFlag)
 {
-	case ItemFlags.Trap:
+    case ItemFlags.Trap:
     case ItemFlags.Advancement:
         return true;
     default:
@@ -91,11 +91,11 @@ switch (itemFlag)
 ItemFlags itemFlag = ItemFlags.Advancement | ItemFlags.Trap;
 if (itemFlag.HasFlag(ItemFlags.Advancement) || itemFlag.HasFlag(ItemFlags.Trap))
 {
-	return true;
+    return true;
 }
 else
 {
-	return false;
+    return false;
 }
 ```
 
@@ -115,18 +115,18 @@ have bring your own session.
 ```cs
 partial class MyClass
 {
-	private ArchipelagoSession session;
+    private ArchipelagoSession session;
 
-	[DataStorageProperty(nameof(session), Scope.Slot, "MyScopedData")]
-	private readonly DataStorageElement _myScopedData;
+    [DataStorageProperty(nameof(session), Scope.Slot, "MyScopedData")]
+    private readonly DataStorageElement _myScopedData;
 
-	[DataStorageProperty(nameof(session), "MyGlobalData")]
-	private readonly DataStorageElement _myGlobalData;
+    [DataStorageProperty(nameof(session), "MyGlobalData")]
+    private readonly DataStorageElement _myGlobalData;
 
-	public void DoStuff()
-	{
-		MyScopedData.Initialize(0);
-		MyGlobalData += 2;
-	}
+    public void DoStuff()
+    {
+        MyScopedData.Initialize(0);
+        MyGlobalData += 2;
+    }
 }
 ```
