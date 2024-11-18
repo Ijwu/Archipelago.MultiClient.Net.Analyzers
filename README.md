@@ -90,3 +90,75 @@ partial class MyClass
 	}
 }
 ```
+
+### MULTICLIENT003 - Avoid using switch statements with ItemFlags
+
+This warning is intended to prevent bugs when comparing `ItemFlags`. Because item classification is a flag,
+an item might have multiple flag values set, such as `ItemFlags.Advancement | ItemFlags.Trap`. In such scenarios,
+a switch statement does not capture the programmer's intent ("is this item a progression item") due to its use of
+direct comparisons. Instead, if-then-else statements with `HasFlag` should be used to perform the comparison. 
+`ItemFlags.Filler` is exempt from this rule because it has the value 0 and `HasFlag(0)` always returns true.
+
+This analyzer also offers a corresponding fix action "Convert ItemFlags switch to if/else" on offending comparisons that contain a constant
+on exactly one side of the comparison. These comparisons will be replaced with a matching `HasFlag` check.
+
+**Incorrect Code:**
+
+```cs
+// MULTICLIENT003
+ItemFlags itemFlag = ItemFlags.Advancement | ItemFlags.Trap;
+switch (itemFlag)
+{
+	case ItemFlags.Trap:
+    case ItemFlags.Advancement:
+        return true;
+    default:
+        return false;
+}
+```
+
+**Fixed Code:**
+
+```cs
+ItemFlags itemFlag = ItemFlags.Advancement | ItemFlags.Trap;
+if (itemFlag.HasFlag(ItemFlags.Advancement) || itemFlag.HasFlag(ItemFlags.Trap))
+{
+	return true;
+}
+else
+{
+	return false;
+}
+```
+
+## Source Generators
+
+### Data Storage Properties
+
+Due to the verbosity of `DataStorageHelper`'s API, it is commonly desirable to assign a `DataStorageElement` to a variable 
+for repeated access. Unfortunately, this does not work for most use cases, and there is [an analyzer](#multiclient001---datastorageelement-assigned-outside-of-datastoragehelper)
+to prevent misuse of the API. This package offers a source generator to create a thin wrapper around the data storage API
+which is also considered an acceptable use by the MULTICLIENT001 analyzer. Note in the example below that you must have a
+session defined in a scope that is available to members of the containing class - again, this is only a thin wrapper so you
+have bring your own session.
+
+**Example Usage:**
+
+```cs
+partial class MyClass
+{
+	private ArchipelagoSession session;
+
+	[DataStorageProperty(nameof(session), Scope.Slot, "MyScopedData")]
+	private readonly DataStorageElement _myScopedData;
+
+	[DataStorageProperty(nameof(session), "MyGlobalData")]
+	private readonly DataStorageElement _myGlobalData;
+
+	public void DoStuff()
+	{
+		MyScopedData.Initialize(0);
+		MyGlobalData += 2;
+	}
+}
+```
