@@ -64,18 +64,19 @@ return item.Flags.HasFlag(ItemFlags.Advancement);
 This warning is intended to prevent bugs when comparing `ItemFlags`. Because item classification is a flag,
 an item might have multiple flag values set, such as `ItemFlags.Advancement | ItemFlags.Trap`. In such scenarios,
 a switch statement does not capture the programmer's intent ("is this item a progression item") due to its use of
-direct comparisons. Instead, if-then-else statements with `HasFlag` should be used to perform the comparison. 
+direct comparisons. Instead, if-else statements with `HasFlag` should be used to perform the comparison. 
 `ItemFlags.Filler` is exempt from this rule because it has the value 0 and `HasFlag(0)` always returns true.
 
-This analyzer also offers a corresponding fix action "Convert ItemFlags switch to if/else" on offending comparisons that contain a constant
-on exactly one side of the comparison. These comparisons will be replaced with a matching `HasFlag` check.
+This analyzer also offers a corresponding fix action "Convert ItemFlags switch to if/else" on offending switch
+statements. These statements will be replaced with an if-else tree containing the matching `HasFlag` checks.
 
 **Incorrect Code:**
 
 ```cs
-// MULTICLIENT003
 ItemFlags itemFlag = ItemFlags.Advancement | ItemFlags.Trap;
-switch (itemFlag)
+
+// MULTICLIENT003
+switch (itemFlag) 
 {
     case ItemFlags.Trap:
     case ItemFlags.Advancement:
