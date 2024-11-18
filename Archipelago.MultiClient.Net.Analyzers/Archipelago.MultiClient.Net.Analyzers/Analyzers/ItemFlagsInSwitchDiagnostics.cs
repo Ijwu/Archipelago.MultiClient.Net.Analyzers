@@ -3,12 +3,11 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
-using System;
 using System.Collections.Immutable;
-using System.Security.Cryptography;
 
 namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
 {
+    // TODO - how much of this applies to switch expressions or pattern matching switch statements?
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class ItemFlagsInSwitchDiagnostics : DiagnosticAnalyzer
     {
