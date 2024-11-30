@@ -45,7 +45,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                 return;
             }
 
-            List<SyntaxNode> caseTargets = new();
+            List<SyntaxNode> caseTargets = [];
             foreach (SwitchSectionSyntax switchSection in switchStatement.Sections)
             {
                 IEnumerable<SyntaxNode> nodesToMove = switchSection.Labels
@@ -60,7 +60,6 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                         title: "Convert to if/else",
                         createChangedDocument: c => ConvertHasFlagsSwitchToIfElse(
                             document: context.Document,
-                            oldRoot: root,
                             switchStatement: switchStatement,
                             cancellationToken: c
                         ),
@@ -72,17 +71,16 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
         private async Task<Document> ConvertHasFlagsSwitchToIfElse(
             Document document,
-            SyntaxNode oldRoot,
             SwitchStatementSyntax switchStatement,
             CancellationToken cancellationToken)
         {
             DocumentEditor editor = await DocumentEditor.CreateAsync(document, cancellationToken);
-            var switchSections = editor.Generator.GetSwitchSections(switchStatement);
-            var switchExpression = switchStatement.Expression;
+            IReadOnlyList<SyntaxNode> switchSections = editor.Generator.GetSwitchSections(switchStatement);
+            ExpressionSyntax switchExpression = switchStatement.Expression;
 
             // This should be an empty SyntaxList based on the default.
             SyntaxList<StatementSyntax> @else = default;
-            SyntaxNode current = null;
+            SyntaxNode? current = null;
 
             // Iterating in reverse order to generate the if-statement chain from the bottom up.
             foreach (var node in switchSections.Reverse())
@@ -109,7 +107,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                 }
             }
 
-            editor.ReplaceNode(switchStatement, current);
+            editor.ReplaceNode(switchStatement, current!);
 
             Document newDoc = editor.GetChangedDocument();
             return newDoc;
