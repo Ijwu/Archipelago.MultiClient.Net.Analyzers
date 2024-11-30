@@ -57,7 +57,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
             context.RegisterCodeFix(
                     CodeAction.Create(
-                        title: "Convert ItemFlags switch to if/else",
+                        title: "Convert to if/else",
                         createChangedDocument: c => ConvertHasFlagsSwitchToIfElse(
                             document: context.Document,
                             oldRoot: root,
