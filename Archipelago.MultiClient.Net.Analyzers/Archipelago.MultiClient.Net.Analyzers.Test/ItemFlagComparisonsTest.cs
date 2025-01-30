@@ -2,47 +2,16 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 using VerifyCS = Archipelago.MultiClient.Net.Analyzers.Test.CSharpCodeFixVerifier<
-    Archipelago.MultiClient.Net.Analyzers.Analyzers.ItemFlagsDiagnostics,
-    Archipelago.MultiClient.Net.Analyzers.Fixes.ItemFlagsFixes>;
+    Archipelago.MultiClient.Net.Analyzers.Analyzers.ItemFlagsComparisonInSwitchCaseDiagnostics,
+    Archipelago.MultiClient.Net.Analyzers.Fixes.ItemFlagsInSwitchFixes>;
 
 namespace Archipelago.MultiClient.Net.Analyzers.Test
 {
     [TestClass]
-    public class ItemFlagComparisonsTest
+    public class ItemFlagsInSwitchTest
     {
         [TestMethod]
-        public async Task VerifyEmptySourceYieldsNoDiagnostic()
-        {
-            string test = @"";
-
-            await VerifyCS.VerifyAnalyzerAsync(test);
-        }
-
-        [TestMethod]
-        public async Task VerifyOtherTypeComparisonYieldsNoDiagnostic()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            int i = 0;
-            bool b = i >= i;
-            return i == i;
-        }
-    }
-}";
-
-            await VerifyCS.VerifyAnalyzerAsync(test);
-        }
-
-        [TestMethod]
-        public async Task VerifyHasFlagComparisonYieldsNoDiagnostic()
+        public async Task VerifyItemFlagsInSwitchStatementYieldsDiagnostic()
         {
             string test = @"
 using System;
@@ -55,39 +24,22 @@ namespace MyClient
         public bool Test()
         {
             ItemFlags i = ItemFlags.Advancement;
-            return i.HasFlag(ItemFlags.Advancement);
+            switch (i)
+            {
+                case {|#0:ItemFlags.Advancement|}:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }";
-
-            await VerifyCS.VerifyAnalyzerAsync(test);
-        }
-
-        [TestMethod]
-        public async Task VerifyEqualsComparisonYieldsDiagnostic()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            return {|#0:i == ItemFlags.Advancement|};
-        }
-    }
-}";
-
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT002").WithLocation(0);
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
         }
 
         [TestMethod]
-        public async Task VerifyEqualsComparisonToFillerYieldsNoDiagnostic()
+        public async Task VerifyMultipleItemFlagsInSwitchStatementYieldsDiagnostics()
         {
             string test = @"
 using System;
@@ -100,96 +52,83 @@ namespace MyClient
         public bool Test()
         {
             ItemFlags i = ItemFlags.Advancement;
-            return i == ItemFlags.None;
+            switch (i)
+            {
+                case {|#0:ItemFlags.Advancement|}:
+                    return true;
+                case {|#1:ItemFlags.None|}:
+                    return false;
+                default:
+                    return false;
+            }
         }
     }
 }";
+            DiagnosticResult[] expected = [
+                VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0), 
+                VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1)
+            ];
+            await VerifyCS.VerifyAnalyzerAsync(test, expected);
+        }
 
+        [TestMethod]
+        public async Task VerifyMixedUseItemFlagsInSwitchStatementYieldsDiagnostic()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            switch (i)
+            {
+                case var f when i.HasFlag(ItemFlags.Advancement):
+                    return true;
+                case {|#0:ItemFlags.Advancement|}:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
+            await VerifyCS.VerifyAnalyzerAsync(test, expected);
+        }
+    
+
+        [TestMethod]
+        public async Task VerifyItemFlagsInSwitchExpressionYieldsNoDiagnostic()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test(ItemFlags flags)
+        {
+            return flags switch
+            {
+                _ when flags.HasFlag(ItemFlags.Advancement) => true,
+                ItemFlags.None => false,
+                _ => false
+            };
+        }
+    }
+}";
             await VerifyCS.VerifyAnalyzerAsync(test);
         }
 
         [TestMethod]
-        public async Task VerifyFixLhsIsConstantLocal()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            const ItemFlags ii = ItemFlags.Advancement;
-            ItemFlags i = ItemFlags.Advancement;
-            return {|#0:ii == i|};
-        }
-    }
-}";
-            string fixTest = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            const ItemFlags ii = ItemFlags.Advancement;
-            ItemFlags i = ItemFlags.Advancement;
-            return i.HasFlag(ii);
-        }
-    }
-}";
-
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT002").WithLocation(0);
-            await VerifyCS.VerifyCodeFixAsync(test, expected, fixTest);
-        }
-
-        [TestMethod]
-        public async Task VerifyFixLhsIsConstantField()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        const ItemFlags ii = ItemFlags.Advancement;
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            return {|#0:ii == i|};
-        }
-    }
-}";
-            string fixTest = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        const ItemFlags ii = ItemFlags.Advancement;
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            return i.HasFlag(ii);
-        }
-    }
-}";
-
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT002").WithLocation(0);
-            await VerifyCS.VerifyCodeFixAsync(test, expected, fixTest);
-        }
-
-        [TestMethod]
-        public async Task VerifyFixLhsIsMemberAccess()
+        public async Task VerifyItemFlagsInSwitchStatementWithPatternMatchingYieldsNoDiagnostic()
         {
             string test = @"
 using System;
@@ -202,66 +141,17 @@ namespace MyClient
         public bool Test()
         {
             ItemFlags i = ItemFlags.Advancement;
-            return {|#0:ItemFlags.Advancement == i|};
+            switch (i)
+            {
+                case var f when i.HasFlag(ItemFlags.Advancement):
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }";
-            string fixTest = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            return i.HasFlag(ItemFlags.Advancement);
-        }
-    }
-}";
-
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT002").WithLocation(0);
-            await VerifyCS.VerifyCodeFixAsync(test, expected, fixTest);
-        }
-
-        [TestMethod]
-        public async Task VerifyFixRhsIsMemberAccess()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            return {|#0:i == ItemFlags.Advancement|};
-        }
-    }
-}";
-            string fixTest = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            return i.HasFlag(ItemFlags.Advancement);
-        }
-    }
-}";
-
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT002").WithLocation(0);
-            await VerifyCS.VerifyCodeFixAsync(test, expected, fixTest);
+            await VerifyCS.VerifyAnalyzerAsync(test);
         }
     }
 }

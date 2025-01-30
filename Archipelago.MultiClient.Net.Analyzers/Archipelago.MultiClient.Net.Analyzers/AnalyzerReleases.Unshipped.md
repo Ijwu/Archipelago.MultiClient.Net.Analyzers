@@ -5,4 +5,4 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|--------------------
-MULTICLIENT003  | Usage |  Warning | ItemFlagsInSwitchDiagnostics, [Documentation](https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient003---avoid-using-switch-statements-with-itemflags)
+MULTICLIENT003  | Usage |  Warning | ItemFlagsComparisonInSwitchCaseDiagnostics, [Documentation](TBD)
