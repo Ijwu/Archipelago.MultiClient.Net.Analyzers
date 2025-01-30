@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
 {
@@ -35,25 +36,23 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
 
         private void AnalyzeSwitch(SyntaxNodeAnalysisContext context)
         {
-            // analyze switch statement for any cases which perform comparisons to ItemFlags object types
+            // analyze the switch statement for any cases which compare directly to the ItemFlags enum
             SwitchStatementSyntax syntax = (SwitchStatementSyntax)context.Node;
-            foreach (SwitchSectionSyntax switchSection in syntax.Sections)
+            foreach (SwitchSectionSyntax section in syntax.Sections)
             {
-                foreach (SwitchLabelSyntax label in switchSection.Labels)
+                foreach (CaseSwitchLabelSyntax label in section.Labels.OfType<CaseSwitchLabelSyntax>())
                 {
-                    if (label is CaseSwitchLabelSyntax caseLabel)
+                    if (label.Value is MemberAccessExpressionSyntax identifier)
                     {
-                        if (caseLabel.Value is IdentifierNameSyntax identifierName)
+                        TypeInfo typeInfo = context.SemanticModel.GetTypeInfo(identifier);
+                        if (ArchipelagoTypeUtils.IsTypeItemFlags(typeInfo.Type, context.Compilation))
                         {
-                            TypeInfo typeInfo = context.SemanticModel.GetTypeInfo(identifierName, context.CancellationToken);
-                            if (ArchipelagoTypeUtils.IsTypeItemFlags(typeInfo.Type, context.Compilation))
-                            {
-                                context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, identifierName.GetLocation()));
-                            }
+                            context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, label.GetLocation()));
                         }
                     }
                 }
             }
+
         }
     }
 }

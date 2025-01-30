@@ -26,7 +26,7 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case {|#0:ItemFlags.Advancement|}:
+                {|#0:case ItemFlags.Advancement:|}
                     return true;
                 default:
                     return false;
@@ -54,9 +54,9 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case {|#0:ItemFlags.Advancement|}:
+                {|#0:case ItemFlags.Advancement:|}
                     return true;
-                case {|#1:ItemFlags.None|}:
+                {|#1:case ItemFlags.None:|}
                     return false;
                 default:
                     return false;
@@ -66,6 +66,38 @@ namespace MyClient
 }";
             DiagnosticResult[] expected = [
                 VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0), 
+                VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1)
+            ];
+            await VerifyCS.VerifyAnalyzerAsync(test, expected);
+        }
+
+        [TestMethod]
+        public async Task VerifyFallthroughItemFlagsInSwitchStatementYieldsDiagnostics()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            switch (i)
+            {
+                {|#0:case ItemFlags.Advancement:|}
+                {|#1:case ItemFlags.None:|}
+                    return false;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            DiagnosticResult[] expected = [
+                VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0),
                 VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1)
             ];
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
@@ -89,7 +121,7 @@ namespace MyClient
             {
                 case var f when i.HasFlag(ItemFlags.Advancement):
                     return true;
-                case {|#0:ItemFlags.Advancement|}:
+                {|#0:case ItemFlags.None:|}
                     return true;
                 default:
                     return false;
