@@ -47,12 +47,15 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
                         TypeInfo typeInfo = context.SemanticModel.GetTypeInfo(identifier);
                         if (ArchipelagoTypeUtils.IsTypeItemFlags(typeInfo.Type, context.Compilation))
                         {
-                            context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, label.GetLocation()));
+                            // Check if the identifier is ItemFlags.None
+                            if (identifier.Name.ToString() != "None")
+                            {
+                                context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, label.GetLocation()));
+                            }
                         }
                     }
                 }
             }
-
         }
     }
 }

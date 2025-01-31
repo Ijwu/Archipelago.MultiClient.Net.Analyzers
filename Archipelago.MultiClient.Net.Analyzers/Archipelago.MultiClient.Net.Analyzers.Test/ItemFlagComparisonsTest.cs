@@ -56,7 +56,7 @@ namespace MyClient
             {
                 {|#0:case ItemFlags.Advancement:|}
                     return true;
-                {|#1:case ItemFlags.None:|}
+                {|#1:case ItemFlags.Trap:|}
                     return false;
                 default:
                     return false;
@@ -65,9 +65,39 @@ namespace MyClient
     }
 }";
             DiagnosticResult[] expected = [
-                VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0), 
+                VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0),
                 VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1)
             ];
+            await VerifyCS.VerifyAnalyzerAsync(test, expected);
+        }
+
+        [TestMethod]
+        public async Task VerifyComparisonToNoneDoesNotYieldDiagnostic()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            switch (i)
+            {
+                {|#0:case ItemFlags.Advancement:|}
+                    return true;
+                case ItemFlags.None:
+                    return false;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
         }
 
@@ -121,7 +151,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                {|#0:case ItemFlags.None:|}
+                {|#0:case ItemFlags.Trap:|}
                     return true;
                 default:
                     return false;
