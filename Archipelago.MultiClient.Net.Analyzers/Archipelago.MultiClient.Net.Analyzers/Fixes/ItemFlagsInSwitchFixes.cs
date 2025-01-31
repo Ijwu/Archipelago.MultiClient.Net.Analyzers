@@ -21,9 +21,9 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
     {
         public const string FixKeyConvertItemFlagsSwitch = "ConvertItemFlagsSwitch";
 
-        public override ImmutableArray<string> FixableDiagnosticIds => [
+        public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create(
             Constants.DiagnosticPrefix + "003"
-        ];
+        );
 
         public override FixAllProvider? GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -38,98 +38,94 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
             Diagnostic diagnostic = context.Diagnostics.First();
             TextSpan span = diagnostic.Location.SourceSpan;
-            SwitchStatementSyntax? switchStatement = root.FindToken(span.Start).Parent?
-                .FirstAncestorOrSelf<SwitchStatementSyntax>();
-            if (switchStatement == null)
+            CaseSwitchLabelSyntax? caseLabel = root.FindToken(span.Start).Parent?
+                .FirstAncestorOrSelf<CaseSwitchLabelSyntax>();
+            if (caseLabel == null)
             {
                 return;
             }
 
-            List<SyntaxNode> caseTargets = [];
-            foreach (SwitchSectionSyntax switchSection in switchStatement.Sections)
-            {
-                IEnumerable<SyntaxNode> nodesToMove = switchSection.Labels
-                    .OfType<CaseSwitchLabelSyntax>()
-                    .SelectMany(label => label.DescendantNodes());
-
-                caseTargets.AddRange(nodesToMove);
-            }
-
             context.RegisterCodeFix(
-                    CodeAction.Create(
-                        title: "Convert to if/else",
-                        createChangedDocument: c => ConvertHasFlagsSwitchToIfElse(
-                            document: context.Document,
-                            switchStatement: switchStatement,
-                            cancellationToken: c
-                        ),
-                        equivalenceKey: FixKeyConvertItemFlagsSwitch
+                CodeAction.Create(
+                    title: "Convert case to use HasFlag",
+                    createChangedDocument: c => ConvertCaseToHasFlag(
+                        document: context.Document,
+                        caseLabel: caseLabel,
+                        cancellationToken: c
                     ),
-                    diagnostic
-                );
+                    equivalenceKey: FixKeyConvertItemFlagsSwitch
+                ),
+                diagnostic
+            );
         }
 
-        private async Task<Document> ConvertHasFlagsSwitchToIfElse(
+        private async Task<Document> ConvertCaseToHasFlag(
             Document document,
-            SwitchStatementSyntax switchStatement,
+            CaseSwitchLabelSyntax caseLabel,
             CancellationToken cancellationToken)
         {
             DocumentEditor editor = await DocumentEditor.CreateAsync(document, cancellationToken);
-            IReadOnlyList<SyntaxNode> switchSections = editor.Generator.GetSwitchSections(switchStatement);
+            SwitchSectionSyntax switchSection = (SwitchSectionSyntax)caseLabel.Parent!;
+            SwitchStatementSyntax switchStatement = (SwitchStatementSyntax)switchSection.Parent!;
             ExpressionSyntax switchExpression = switchStatement.Expression;
+            
+            string variableName = GetPatternMatchingVariableName(editor, switchExpression);
 
-            // This should be an empty SyntaxList based on the default.
-            SyntaxList<StatementSyntax> @else = default;
-            SyntaxNode? current = null;
+            // Generate the pattern matching case label
+            CasePatternSwitchLabelSyntax newCaseLabel = GeneratePatternMatchingCaseLabel(caseLabel, switchExpression, variableName);
 
-            // Iterating in reverse order to generate the if-statement chain from the bottom up.
-            foreach (var node in switchSections.Reverse())
-            {
-                SwitchSectionSyntax switchSection = (SwitchSectionSyntax)node;
-                List<ExpressionSyntax> cases = switchSection.Labels.OfType<CaseSwitchLabelSyntax>().Select(x => x.Value).ToList();
-                
-                if (cases.Count == 0 || switchSection.Labels.OfType<DefaultSwitchLabelSyntax>().Any())
-                {
-                    // If no `CaseSwitchLabelSyntax` elements, then this should be a `DefaultSwitchLabelSyntax` marking a `case default:`.
-                    // In that case, I need to grab the statement to form the `else` of the if-statement
-                    @else = switchSection.Statements;
-                    continue;
-                }
-                
-                SyntaxNode condition = GenerateHasFlagsInvocation(editor, cases, switchExpression);
-                if (current is null)
-                {
-                    current = editor.Generator.IfStatement(condition, switchSection.Statements, @else);
-                }
-                else
-                {
-                    current = editor.Generator.IfStatement(condition, switchSection.Statements, current);
-                }
-            }
-
-            editor.ReplaceNode(switchStatement, current!);
+            // Replace the old case label with the new case label
+            editor.ReplaceNode(caseLabel, newCaseLabel);
 
             Document newDoc = editor.GetChangedDocument();
             return newDoc;
         }
 
-        private SyntaxNode GenerateHasFlagsInvocation(DocumentEditor editor, List<ExpressionSyntax> cases, ExpressionSyntax switchExpression)
+        private static string GetPatternMatchingVariableName(DocumentEditor editor, ExpressionSyntax switchExpression)
         {
-            SyntaxNode GenerateInvocation(ExpressionSyntax expression) => 
-                editor.Generator.InvocationExpression(editor.Generator.MemberAccessExpression(switchExpression, "HasFlag"), expression);
+            var analysis = editor.SemanticModel.AnalyzeDataFlow(switchExpression);
 
-            if (cases.Count == 1)
+            if (analysis is null)
             {
-                return GenerateInvocation(cases[0]);
+                return "f";
+            }
+            
+            var hasCollision = analysis.WrittenOutside.Any(x => x.Name.StartsWith("f"));
+
+            if (hasCollision)
+            {
+                var collisions = analysis.WrittenOutside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
+                var existingNumberedFVars = collisions.Select(x => int.Parse(x.Name[1..]));
+
+                if (!existingNumberedFVars.Any())
+                {
+                    return $"f1";
+                }
+
+                return $"f{existingNumberedFVars.Max() + 1}";
             }
 
-            SyntaxNode current = editor.Generator.LogicalOrExpression(GenerateInvocation(cases[0]), GenerateInvocation(cases[1]));
-            foreach (var target in cases.Skip(2))
-            {
-                current = editor.Generator.LogicalOrExpression(current, GenerateInvocation(target));    
-            }
+            return "f";
+        }
 
-            return current;
+        private CasePatternSwitchLabelSyntax GeneratePatternMatchingCaseLabel(CaseSwitchLabelSyntax caseLabel, ExpressionSyntax switchExpression, string newVarName)
+        {
+            // Create the pattern matching statement: "case var f when f.HasFlag(ItemFlags.Advancement):"
+            var variableDesignation = SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(newVarName));
+            var varPattern = SyntaxFactory.VarPattern(SyntaxFactory.Token(SyntaxKind.VarKeyword), variableDesignation);
+
+            var whenClause = SyntaxFactory.WhenClause(
+                SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        SyntaxFactory.IdentifierName(newVarName),
+                        SyntaxFactory.IdentifierName("HasFlag")
+                    ),
+                    SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(caseLabel.Value)))
+                )
+            );
+
+            return SyntaxFactory.CasePatternSwitchLabel(varPattern, whenClause, SyntaxFactory.Token(SyntaxKind.ColonToken));
         }
     }
 }
