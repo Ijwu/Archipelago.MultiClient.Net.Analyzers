@@ -118,7 +118,7 @@ namespace MyClient
             switch (i)
             {
                 {|#0:case ItemFlags.Advancement:|}
-                {|#1:case ItemFlags.None:|}
+                {|#1:case ItemFlags.Trap:|}
                     return false;
                 default:
                     return false;
@@ -283,7 +283,7 @@ namespace MyClient
             {
                 {|#0:case ItemFlags.Advancement:|}
                     return true;
-                {|#1:case ItemFlags.None:|}
+                {|#1:case ItemFlags.Trap:|}
                     return false;
                 default:
                     return false;
@@ -306,7 +306,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f when f.HasFlag(ItemFlags.None):
+                case var f when f.HasFlag(ItemFlags.Trap):
                     return false;
                 default:
                     return false;
@@ -336,7 +336,7 @@ namespace MyClient
             switch (i)
             {
                 {|#0:case ItemFlags.Advancement:|}
-                {|#1:case ItemFlags.None:|}
+                {|#1:case ItemFlags.Trap:|}
                     return true;
                 default:
                     return false;
@@ -358,7 +358,7 @@ namespace MyClient
             switch (i)
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
-                case var f1 when f1.HasFlag(ItemFlags.None):
+                case var f1 when f1.HasFlag(ItemFlags.Trap):
                     return true;
                 default:
                     return false;
@@ -389,7 +389,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                {|#0:case ItemFlags.None:|}
+                {|#0:case ItemFlags.Trap:|}
                     return true;
                 default:
                     return false;
@@ -412,7 +412,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f when f.HasFlag(ItemFlags.None):
+                case var f when f.HasFlag(ItemFlags.Trap):
                     return true;
                 default:
                     return false;
