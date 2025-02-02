@@ -59,15 +59,15 @@ return item.Flags == ItemFlags.Advancement;
 return item.Flags.HasFlag(ItemFlags.Advancement);
 ```
 
-### MULTICLIENT003 - Avoid using switch statements with ItemFlags
+### MULTICLIENT003 - Avoid value comparisons for ItemFlags objects in switch cases
 
 This warning is intended to prevent bugs when comparing `ItemFlags`. Because item classification is a flag,
 an item might have multiple flag values set, such as `ItemFlags.Advancement | ItemFlags.Trap`. In such scenarios,
 a switch statement does not capture the programmer's intent ("is this item a progression item") due to its use of
-direct comparisons. Instead, if-else statements with `HasFlag` should be used to perform the comparison. 
+direct comparisons. Instead, pattern matching case statements with `HasFlag` should be used to perform the comparison. 
 
-This analyzer also offers a corresponding fix action "Convert ItemFlags switch to if/else" on offending switch
-statements. These statements will be replaced with an if-else tree containing the matching `HasFlag` checks.
+This analyzer also offers a corresponding fix action "Convert case to use HasFlag" on offending switch
+statements. These statements will be replaced with pattern matching case statements containing the matching `HasFlag` checks.
 
 **Incorrect Code:**
 
@@ -88,14 +88,14 @@ switch (itemFlag)
 **Fixed Code:**
 
 ```cs
-ItemFlags itemFlag = ItemFlags.Advancement | ItemFlags.Trap;
-if (itemFlag.HasFlag(ItemFlags.Advancement) || itemFlag.HasFlag(ItemFlags.Trap))
+ItemFlags i = ItemFlags.Advancement;
+switch (i)
 {
-    return true;
-}
-else
-{
-    return false;
+    case var f when f.HasFlag(ItemFlags.Advancement):
+    case var f1 when f1.HasFlag(ItemFlags.Trap):
+        return true;
+    default:
+        return false;
 }
 ```
 
