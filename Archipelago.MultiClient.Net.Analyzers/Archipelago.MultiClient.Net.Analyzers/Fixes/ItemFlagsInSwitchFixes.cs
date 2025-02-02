@@ -25,8 +25,6 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             Constants.DiagnosticPrefix + "003"
         );
 
-        public override FixAllProvider? GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
-
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             SyntaxNode? root = await context.Document.GetSyntaxRootAsync(context.CancellationToken)
@@ -69,7 +67,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             SwitchStatementSyntax switchStatement = (SwitchStatementSyntax)switchSection.Parent!;
             ExpressionSyntax switchExpression = switchStatement.Expression;
             
-            string variableName = GetPatternMatchingVariableName(editor, switchExpression);
+            string variableName = GetPatternMatchingVariableName(editor, switchStatement);
 
             // Generate the pattern matching case label
             CasePatternSwitchLabelSyntax newCaseLabel = GeneratePatternMatchingCaseLabel(caseLabel, switchExpression, variableName);
@@ -81,20 +79,20 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             return newDoc;
         }
 
-        private static string GetPatternMatchingVariableName(DocumentEditor editor, ExpressionSyntax switchExpression)
+        private static string GetPatternMatchingVariableName(DocumentEditor editor, SwitchStatementSyntax switchStatement)
         {
-            var analysis = editor.SemanticModel.AnalyzeDataFlow(switchExpression);
+            var analysis = editor.SemanticModel.AnalyzeDataFlow(switchStatement);
 
             if (analysis is null)
             {
                 return "f";
             }
             
-            var hasCollision = analysis.WrittenOutside.Any(x => x.Name.StartsWith("f"));
+            var hasCollision = analysis.WrittenInside.Any(x => x.Name.StartsWith("f"));
 
             if (hasCollision)
             {
-                var collisions = analysis.WrittenOutside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
+                var collisions = analysis.WrittenInside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
                 var existingNumberedFVars = collisions.Select(x => int.Parse(x.Name[1..]));
 
                 if (!existingNumberedFVars.Any())

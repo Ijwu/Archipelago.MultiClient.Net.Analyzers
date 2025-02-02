@@ -306,7 +306,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f when f.HasFlag(ItemFlags.Trap):
+                case var f1 when f1.HasFlag(ItemFlags.Trap):
                     return false;
                 default:
                     return false;
@@ -412,7 +412,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f when f.HasFlag(ItemFlags.Trap):
+                case var f1 when f1.HasFlag(ItemFlags.Trap):
                     return true;
                 default:
                     return false;
