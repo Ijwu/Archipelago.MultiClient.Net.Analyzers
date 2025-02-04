@@ -18,8 +18,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
             category: "Usage",
             defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            // TODO
-            helpLinkUri: "https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient003---avoid-using-switch-statements-with-itemflags"
+            helpLinkUri: "https://github.com/BadMagic100/Archipelago.MultiClient.Net.Analyzers#multiclient003---avoid-value-comparisons-for-itemflags-objects-in-switch-cases"
         );
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [
@@ -47,8 +46,11 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
                         TypeInfo typeInfo = context.SemanticModel.GetTypeInfo(identifier);
                         if (ArchipelagoTypeUtils.IsTypeItemFlags(typeInfo.Type, context.Compilation))
                         {
-                            // Check if the identifier is ItemFlags.None
-                            if (identifier.Name.ToString() != "None")
+                            // Get value of enum identifier. Value cannot be null if we're in this `if` block.
+                            int identifierValue = (int)context.SemanticModel.GetConstantValue(identifier).Value!;
+
+                            // If value equals 0 then it is `ItemFlags.None`
+                            if (identifierValue != 0)
                             {
                                 context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, label.GetLocation()));
                             }
