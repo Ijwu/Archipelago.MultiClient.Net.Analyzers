@@ -5,11 +5,9 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Text;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,19 +79,19 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
         private static string GetPatternMatchingVariableName(DocumentEditor editor, SwitchStatementSyntax switchStatement)
         {
-            var analysis = editor.SemanticModel.AnalyzeDataFlow(switchStatement);
+            DataFlowAnalysis? analysis = editor.SemanticModel.AnalyzeDataFlow(switchStatement);
 
             if (analysis is null)
             {
                 return "f";
             }
-            
-            var hasCollision = analysis.WrittenInside.Any(x => x.Name.StartsWith("f"));
+
+            bool hasCollision = analysis.WrittenInside.Any(x => x.Name.StartsWith("f"));
 
             if (hasCollision)
             {
-                var collisions = analysis.WrittenInside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
-                var existingNumberedFVars = collisions.Select(x => int.Parse(x.Name[1..]));
+                IEnumerable<ISymbol> collisions = analysis.WrittenInside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
+                IEnumerable<int> existingNumberedFVars = collisions.Select(x => int.Parse(x.Name[1..]));
 
                 if (!existingNumberedFVars.Any())
                 {
@@ -109,10 +107,10 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
         private CasePatternSwitchLabelSyntax GeneratePatternMatchingCaseLabel(CaseSwitchLabelSyntax caseLabel, ExpressionSyntax switchExpression, string newVarName)
         {
             // Create the pattern matching statement: "case var f when f.HasFlag(ItemFlags.Advancement):"
-            var variableDesignation = SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(newVarName));
-            var varPattern = SyntaxFactory.VarPattern(SyntaxFactory.Token(SyntaxKind.VarKeyword), variableDesignation);
+            SingleVariableDesignationSyntax variableDesignation = SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(newVarName));
+            VarPatternSyntax varPattern = SyntaxFactory.VarPattern(SyntaxFactory.Token(SyntaxKind.VarKeyword), variableDesignation);
 
-            var whenClause = SyntaxFactory.WhenClause(
+            WhenClauseSyntax whenClause = SyntaxFactory.WhenClause(
                 SyntaxFactory.InvocationExpression(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
