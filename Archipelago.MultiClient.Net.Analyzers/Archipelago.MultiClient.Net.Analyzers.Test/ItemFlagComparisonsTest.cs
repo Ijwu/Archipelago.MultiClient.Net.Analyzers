@@ -164,6 +164,10 @@ namespace MyClient
         }
     
 
+        /// <remarks>
+        /// If the analyzer/fix for MULTICLIENT003 are updated to support switch expressions,
+        /// this test will require updating.
+        /// </remarks>
         [TestMethod]
         public async Task VerifyItemFlagsInSwitchExpressionYieldsNoDiagnostic()
         {
@@ -181,6 +185,7 @@ namespace MyClient
             {
                 _ when flags.HasFlag(ItemFlags.Advancement) => true,
                 ItemFlags.None => false,
+                ItemFlags.Advancement => true,
                 _ => false
             };
         }
