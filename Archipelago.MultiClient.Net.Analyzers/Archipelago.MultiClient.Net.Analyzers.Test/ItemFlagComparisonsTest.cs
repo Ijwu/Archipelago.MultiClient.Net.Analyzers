@@ -428,5 +428,119 @@ namespace MyClient
             DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
             await VerifyCS.VerifyCodeFixAsync(test, expected, fixTest);
         }
+
+        [TestMethod]
+        public async Task VerifyFixMultipleItemFlagsInSwitchStatement_WithUnrelatedFVariable()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            string f = ""testString"";
+            switch (i)
+            {
+                {|#0:case ItemFlags.Advancement:|}
+                    return true;
+                {|#1:case ItemFlags.Trap:|}
+                    return false;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            string fixTest = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            string f = ""testString"";
+            switch (i)
+            {
+                case var f1 when f1.HasFlag(ItemFlags.Advancement):
+                    return true;
+                case var f2 when f2.HasFlag(ItemFlags.Trap):
+                    return false;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
+        }
+
+        [TestMethod]
+        public async Task VerifyFixMultipleItemFlagsInSwitchStatement_WithMultipleUnrelatedFVariables()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            string f = ""testString"";
+            int f1 = 1;
+            switch (i)
+            {
+                {|#0:case ItemFlags.Advancement:|}
+                    return true;
+                {|#1:case ItemFlags.Trap:|}
+                    return false;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            string fixTest = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            string f = ""testString"";
+            int f1 = 1;
+            switch (i)
+            {
+                case var f2 when f2.HasFlag(ItemFlags.Advancement):
+                    return true;
+                case var f3 when f3.HasFlag(ItemFlags.Trap):
+                    return false;
+                default:
+                    return false;
+            }
+        }
+    }
+}";
+            DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
+            DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
+        }
     }
 }
