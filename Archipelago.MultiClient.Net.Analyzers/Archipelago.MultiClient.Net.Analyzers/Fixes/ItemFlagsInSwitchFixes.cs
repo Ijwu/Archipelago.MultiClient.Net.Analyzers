@@ -63,12 +63,11 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             DocumentEditor editor = await DocumentEditor.CreateAsync(document, cancellationToken);
             SwitchSectionSyntax switchSection = (SwitchSectionSyntax)caseLabel.Parent!;
             SwitchStatementSyntax switchStatement = (SwitchStatementSyntax)switchSection.Parent!;
-            ExpressionSyntax switchExpression = switchStatement.Expression;
             
             string variableName = GetPatternMatchingVariableName(editor, switchStatement);
 
             // Generate the pattern matching case label
-            CasePatternSwitchLabelSyntax newCaseLabel = GeneratePatternMatchingCaseLabel(caseLabel, switchExpression, variableName);
+            CasePatternSwitchLabelSyntax newCaseLabel = GeneratePatternMatchingCaseLabel(caseLabel, variableName);
 
             // Replace the old case label with the new case label
             editor.ReplaceNode(caseLabel, newCaseLabel);
@@ -86,11 +85,11 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                 return "f";
             }
 
-            bool hasCollision = analysis.WrittenInside.Any(x => x.Name.StartsWith("f"));
-
+            bool hasCollision = analysis.WrittenInside.Any(x => x.Name.StartsWith("f")) || analysis.DefinitelyAssignedOnEntry.Any(x => x.Name.StartsWith("f"));
             if (hasCollision)
             {
-                IEnumerable<ISymbol> collisions = analysis.WrittenInside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
+                IEnumerable<ISymbol> externalCollisions = analysis.DefinitelyAssignedOnEntry.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
+                IEnumerable<ISymbol> collisions = analysis.WrittenInside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _)).Concat(externalCollisions);
                 IEnumerable<int> existingNumberedFVars = collisions.Select(x => int.Parse(x.Name[1..]));
 
                 if (!existingNumberedFVars.Any())
@@ -104,7 +103,7 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             return "f";
         }
 
-        private CasePatternSwitchLabelSyntax GeneratePatternMatchingCaseLabel(CaseSwitchLabelSyntax caseLabel, ExpressionSyntax switchExpression, string newVarName)
+        private CasePatternSwitchLabelSyntax GeneratePatternMatchingCaseLabel(CaseSwitchLabelSyntax caseLabel, string newVarName)
         {
             // Create the pattern matching statement: "case var f when f.HasFlag(ItemFlags.Advancement):"
             SingleVariableDesignationSyntax variableDesignation = SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(newVarName));
