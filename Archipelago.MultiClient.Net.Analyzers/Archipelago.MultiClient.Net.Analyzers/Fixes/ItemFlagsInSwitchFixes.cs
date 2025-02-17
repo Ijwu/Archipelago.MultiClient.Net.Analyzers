@@ -1,11 +1,11 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using Archipelago.MultiClient.Net.Analyzers.Util;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Text;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Linq;
@@ -63,8 +63,8 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             DocumentEditor editor = await DocumentEditor.CreateAsync(document, cancellationToken);
             SwitchSectionSyntax switchSection = (SwitchSectionSyntax)caseLabel.Parent!;
             SwitchStatementSyntax switchStatement = (SwitchStatementSyntax)switchSection.Parent!;
-            
-            string variableName = GetPatternMatchingVariableName(editor, switchStatement);
+
+            string variableName = NameGenerator.GetUniqueVariableName("f", editor.SemanticModel, caseLabel.SpanStart);
 
             // Generate the pattern matching case label
             CasePatternSwitchLabelSyntax newCaseLabel = GeneratePatternMatchingCaseLabel(caseLabel, variableName);
@@ -74,33 +74,6 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
 
             Document newDoc = editor.GetChangedDocument();
             return newDoc;
-        }
-
-        private static string GetPatternMatchingVariableName(DocumentEditor editor, SwitchStatementSyntax switchStatement)
-        {
-            DataFlowAnalysis? analysis = editor.SemanticModel.AnalyzeDataFlow(switchStatement);
-
-            if (analysis is null)
-            {
-                return "f";
-            }
-
-            bool hasCollision = analysis.WrittenInside.Any(x => x.Name.StartsWith("f")) || analysis.DefinitelyAssignedOnEntry.Any(x => x.Name.StartsWith("f"));
-            if (hasCollision)
-            {
-                IEnumerable<ISymbol> externalCollisions = analysis.DefinitelyAssignedOnEntry.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _));
-                IEnumerable<ISymbol> collisions = analysis.WrittenInside.Where(x => x.Name.StartsWith("f") && int.TryParse(x.Name[1..], out var _)).Concat(externalCollisions);
-                IEnumerable<int> existingNumberedFVars = collisions.Select(x => int.Parse(x.Name[1..]));
-
-                if (!existingNumberedFVars.Any())
-                {
-                    return $"f1";
-                }
-
-                return $"f{existingNumberedFVars.Max() + 1}";
-            }
-
-            return "f";
         }
 
         private CasePatternSwitchLabelSyntax GeneratePatternMatchingCaseLabel(CaseSwitchLabelSyntax caseLabel, string newVarName)

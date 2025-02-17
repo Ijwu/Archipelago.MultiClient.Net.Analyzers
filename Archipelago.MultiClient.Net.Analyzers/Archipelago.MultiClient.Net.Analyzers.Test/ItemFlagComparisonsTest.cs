@@ -311,7 +311,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f1 when f1.HasFlag(ItemFlags.Trap):
+                case var f when f.HasFlag(ItemFlags.Trap):
                     return false;
                 default:
                     return false;
@@ -417,7 +417,7 @@ namespace MyClient
             {
                 case var f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f1 when f1.HasFlag(ItemFlags.Trap):
+                case var f when f.HasFlag(ItemFlags.Trap):
                     return true;
                 default:
                     return false;
@@ -472,7 +472,7 @@ namespace MyClient
             {
                 case var f1 when f1.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f2 when f2.HasFlag(ItemFlags.Trap):
+                case var f1 when f1.HasFlag(ItemFlags.Trap):
                     return false;
                 default:
                     return false;
@@ -506,6 +506,7 @@ namespace MyClient
                 {|#0:case ItemFlags.Advancement:|}
                     return true;
                 {|#1:case ItemFlags.Trap:|}
+                {|#2:case ItemFlags.NeverExclude:|}
                     return false;
                 default:
                     return false;
@@ -530,7 +531,8 @@ namespace MyClient
             {
                 case var f2 when f2.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f3 when f3.HasFlag(ItemFlags.Trap):
+                case var f2 when f2.HasFlag(ItemFlags.Trap):
+                case var f3 when f3.HasFlag(ItemFlags.NeverExclude):
                     return false;
                 default:
                     return false;
@@ -540,7 +542,8 @@ namespace MyClient
 }";
             DiagnosticResult expected1 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
             DiagnosticResult expected2 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1);
-            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2], fixTest);
+            DiagnosticResult expected3 = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(2);
+            await VerifyCS.VerifyCodeFixAsync(test, [expected1, expected2, expected3], fixTest);
         }
     }
 }
