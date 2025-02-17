@@ -8,7 +8,7 @@ using VerifyCS = Archipelago.MultiClient.Net.Analyzers.Test.CSharpCodeFixVerifie
 namespace Archipelago.MultiClient.Net.Analyzers.Test
 {
     [TestClass]
-    public class ItemFlagsInSwitchTest
+    public class ItemFlagsSwitchTest
     {
         [TestMethod]
         public async Task VerifyItemFlagsInSwitchStatementYieldsDiagnostic()
