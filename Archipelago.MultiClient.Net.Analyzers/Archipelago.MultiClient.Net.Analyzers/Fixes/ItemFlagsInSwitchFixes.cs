@@ -33,12 +33,20 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             }
 
             Diagnostic diagnostic = context.Diagnostics.First();
+            if (!TryRewriteCaseLabel(context, root, diagnostic))
+            {
+                TryRewriteConstPatternArm(context, root, diagnostic);
+            }
+        }
+
+        private bool TryRewriteCaseLabel(CodeFixContext context, SyntaxNode root, Diagnostic diagnostic)
+        {
             TextSpan span = diagnostic.Location.SourceSpan;
             CaseSwitchLabelSyntax? caseLabel = root.FindToken(span.Start).Parent?
                 .FirstAncestorOrSelf<CaseSwitchLabelSyntax>();
             if (caseLabel == null)
             {
-                return;
+                return false;
             }
 
             context.RegisterCodeFix(
@@ -53,6 +61,33 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                 ),
                 diagnostic
             );
+            return true;
+        }
+
+        private bool TryRewriteConstPatternArm(CodeFixContext context, SyntaxNode root, Diagnostic diagnostic)
+        {
+            TextSpan span = diagnostic.Location.SourceSpan;
+            SwitchExpressionArmSyntax? arm = root.FindToken(span.Start).Parent?
+                .FirstAncestorOrSelf<SwitchExpressionArmSyntax>();
+            if (arm is not { Pattern: ConstantPatternSyntax constPattern })
+            {
+                return false;
+            }
+
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    title: "Convert pattern to use HasFlag",
+                    createChangedDocument: c => ConvertConstantPatternArmToHasFlag(
+                        document: context.Document,
+                        arm: arm,
+                        constPattern: constPattern,
+                        cancellationToken: c
+                    ),
+                    equivalenceKey: FixKeyConvertItemFlagsSwitch
+                ),
+                diagnostic
+            );
+            return true;
         }
 
         private async Task<Document> ConvertCaseToHasFlag(
@@ -61,26 +96,43 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
             CancellationToken cancellationToken)
         {
             DocumentEditor editor = await DocumentEditor.CreateAsync(document, cancellationToken);
-            SwitchSectionSyntax switchSection = (SwitchSectionSyntax)caseLabel.Parent!;
-            SwitchStatementSyntax switchStatement = (SwitchStatementSyntax)switchSection.Parent!;
-
             string variableName = NameGenerator.GetUniqueVariableName("f", editor.SemanticModel, caseLabel.SpanStart);
 
-            // Generate the pattern matching case label
-            CasePatternSwitchLabelSyntax newCaseLabel = GeneratePatternMatchingCaseLabel(caseLabel, variableName);
+            var (pattern, whenClause) = RewriteConstantMemberAccessToPatternMatch(caseLabel.Value, variableName);
+            CasePatternSwitchLabelSyntax newCaseLabel = SyntaxFactory.CasePatternSwitchLabel(
+                pattern, whenClause, SyntaxFactory.Token(SyntaxKind.ColonToken));
 
-            // Replace the old case label with the new case label
             editor.ReplaceNode(caseLabel, newCaseLabel);
 
             Document newDoc = editor.GetChangedDocument();
             return newDoc;
         }
 
-        private CasePatternSwitchLabelSyntax GeneratePatternMatchingCaseLabel(CaseSwitchLabelSyntax caseLabel, string newVarName)
+        private async Task<Document> ConvertConstantPatternArmToHasFlag(
+            Document document,
+            SwitchExpressionArmSyntax arm,
+            ConstantPatternSyntax constPattern,
+            CancellationToken cancellationToken)
         {
-            // Create the pattern matching statement: "case var f when f.HasFlag(ItemFlags.Advancement):"
+            DocumentEditor editor = await DocumentEditor.CreateAsync(document, cancellationToken);
+            string variableName = NameGenerator.GetUniqueVariableName("f", editor.SemanticModel, constPattern.SpanStart);
+
+            var (pattern, whenClause) = RewriteConstantMemberAccessToPatternMatch(constPattern.Expression, variableName);
+
+            SwitchExpressionArmSyntax newArm = SyntaxFactory.SwitchExpressionArm(pattern, whenClause, arm.Expression);
+            editor.ReplaceNode(arm, newArm);
+
+            Document newDoc = editor.GetChangedDocument();
+            return newDoc;
+        }
+
+        private (PatternSyntax, WhenClauseSyntax) RewriteConstantMemberAccessToPatternMatch(ExpressionSyntax expr, string newVarName)
+        {
             SingleVariableDesignationSyntax variableDesignation = SyntaxFactory.SingleVariableDesignation(SyntaxFactory.Identifier(newVarName));
-            VarPatternSyntax varPattern = SyntaxFactory.VarPattern(SyntaxFactory.Token(SyntaxKind.VarKeyword), variableDesignation);
+            DeclarationPatternSyntax declPattern = SyntaxFactory.DeclarationPattern(
+                SyntaxFactory.IdentifierName("ItemFlags"), 
+                variableDesignation
+            );
 
             WhenClauseSyntax whenClause = SyntaxFactory.WhenClause(
                 SyntaxFactory.InvocationExpression(
@@ -89,11 +141,11 @@ namespace Archipelago.MultiClient.Net.Analyzers.Fixes
                         SyntaxFactory.IdentifierName(newVarName),
                         SyntaxFactory.IdentifierName("HasFlag")
                     ),
-                    SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(caseLabel.Value)))
+                    SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(expr)))
                 )
             );
 
-            return SyntaxFactory.CasePatternSwitchLabel(varPattern, whenClause, SyntaxFactory.Token(SyntaxKind.ColonToken));
+            return (declPattern, whenClause);
         }
     }
 }

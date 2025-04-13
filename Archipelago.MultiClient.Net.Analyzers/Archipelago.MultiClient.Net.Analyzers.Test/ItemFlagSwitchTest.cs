@@ -26,7 +26,13 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                {|#0:case ItemFlags.Advancement:|}
+                // pattern matches are safe
+                case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
+                    return true;
+                {|#0:case ItemFlags.Trap:|}
+                    return true;
+                // comparisons to None (0) are safe
+                case ItemFlags.None:
                     return true;
                 default:
                     return false;
@@ -72,36 +78,6 @@ namespace MyClient
         }
 
         [TestMethod]
-        public async Task VerifyComparisonToNoneDoesNotYieldDiagnostic()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            switch (i)
-            {
-                {|#0:case ItemFlags.Advancement:|}
-                    return true;
-                case ItemFlags.None:
-                    return false;
-                default:
-                    return false;
-            }
-        }
-    }
-}";
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
-            await VerifyCS.VerifyAnalyzerAsync(test, expected);
-        }
-
-        [TestMethod]
         public async Task VerifyFallthroughItemFlagsInSwitchStatementYieldsDiagnostics()
         {
             string test = @"
@@ -131,45 +107,10 @@ namespace MyClient
                 VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(1)
             ];
             await VerifyCS.VerifyAnalyzerAsync(test, expected);
-        }
+        }    
 
         [TestMethod]
-        public async Task VerifyMixedUseItemFlagsInSwitchStatementYieldsDiagnostic()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            switch (i)
-            {
-                case var f when f.HasFlag(ItemFlags.Advancement):
-                    return true;
-                {|#0:case ItemFlags.Trap:|}
-                    return true;
-                default:
-                    return false;
-            }
-        }
-    }
-}";
-            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
-            await VerifyCS.VerifyAnalyzerAsync(test, expected);
-        }
-    
-
-        /// <remarks>
-        /// If the analyzer/fix for MULTICLIENT003 are updated to support switch expressions,
-        /// this test will require updating.
-        /// </remarks>
-        [TestMethod]
-        public async Task VerifyItemFlagsInSwitchExpressionYieldsNoDiagnostic()
+        public async Task VerifyItemFlagsInSwitchExpressionYieldsDiagnostic()
         {
             string test = @"
 using System;
@@ -183,42 +124,18 @@ namespace MyClient
         {
             return flags switch
             {
-                _ when flags.HasFlag(ItemFlags.Advancement) => true,
+                // valid because it uses pattern matching
+                ItemFlags f when f.HasFlag(ItemFlags.Advancement) => true,
+                // comparisons to None (0) are safe
                 ItemFlags.None => false,
-                ItemFlags.Advancement => true,
+                {|#0:ItemFlags.Advancement|} => true,
                 _ => false
             };
         }
     }
 }";
-            await VerifyCS.VerifyAnalyzerAsync(test);
-        }
-
-        [TestMethod]
-        public async Task VerifyItemFlagsInSwitchStatementWithPatternMatchingYieldsNoDiagnostic()
-        {
-            string test = @"
-using System;
-using Archipelago.MultiClient.Net.Enums;
-
-namespace MyClient
-{
-    class MyClass
-    {
-        public bool Test()
-        {
-            ItemFlags i = ItemFlags.Advancement;
-            switch (i)
-            {
-                case var f when f.HasFlag(ItemFlags.Advancement):
-                    return true;
-                default:
-                    return false;
-            }
-        }
-    }
-}";
-            await VerifyCS.VerifyAnalyzerAsync(test);
+            DiagnosticResult expectedDiagnostic = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
+            await VerifyCS.VerifyAnalyzerAsync(test, expectedDiagnostic);
         }
 
         [TestMethod]
@@ -258,7 +175,7 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case var f when f.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
                     return true;
                 default:
                     return false;
@@ -309,9 +226,9 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case var f when f.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f when f.HasFlag(ItemFlags.Trap):
+                case ItemFlags f when f.HasFlag(ItemFlags.Trap):
                     return false;
                 default:
                     return false;
@@ -362,8 +279,8 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case var f when f.HasFlag(ItemFlags.Advancement):
-                case var f1 when f1.HasFlag(ItemFlags.Trap):
+                case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f1 when f1.HasFlag(ItemFlags.Trap):
                     return true;
                 default:
                     return false;
@@ -392,7 +309,7 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case var f when f.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
                     return true;
                 {|#0:case ItemFlags.Trap:|}
                     return true;
@@ -415,13 +332,60 @@ namespace MyClient
             ItemFlags i = ItemFlags.Advancement;
             switch (i)
             {
-                case var f when f.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f when f.HasFlag(ItemFlags.Trap):
+                case ItemFlags f when f.HasFlag(ItemFlags.Trap):
                     return true;
                 default:
                     return false;
             }
+        }
+    }
+}";
+            DiagnosticResult expected = VerifyCS.Diagnostic("MULTICLIENT003").WithLocation(0);
+            await VerifyCS.VerifyCodeFixAsync(test, expected, fixTest);
+        }
+
+        [TestMethod]
+        public async Task VerifyFixMixedUseItemFlagsInSwitchExpression()
+        {
+            string test = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            return i switch
+            {
+                ItemFlags f when f.HasFlag(ItemFlags.Advancement) => true,
+                {|#0:ItemFlags.Trap|} => true,
+                _ => false
+            };
+        }
+    }
+}";
+            string fixTest = @"
+using System;
+using Archipelago.MultiClient.Net.Enums;
+
+namespace MyClient
+{
+    class MyClass
+    {
+        public bool Test()
+        {
+            ItemFlags i = ItemFlags.Advancement;
+            return i switch
+            {
+                ItemFlags f when f.HasFlag(ItemFlags.Advancement) => true,
+                ItemFlags f when f.HasFlag(ItemFlags.Trap) => true,
+                _ => false
+            };
         }
     }
 }";
@@ -470,9 +434,9 @@ namespace MyClient
             string f = ""testString"";
             switch (i)
             {
-                case var f1 when f1.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f1 when f1.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f1 when f1.HasFlag(ItemFlags.Trap):
+                case ItemFlags f1 when f1.HasFlag(ItemFlags.Trap):
                     return false;
                 default:
                     return false;
@@ -529,10 +493,10 @@ namespace MyClient
             int f1 = 1;
             switch (i)
             {
-                case var f2 when f2.HasFlag(ItemFlags.Advancement):
+                case ItemFlags f2 when f2.HasFlag(ItemFlags.Advancement):
                     return true;
-                case var f2 when f2.HasFlag(ItemFlags.Trap):
-                case var f3 when f3.HasFlag(ItemFlags.NeverExclude):
+                case ItemFlags f2 when f2.HasFlag(ItemFlags.Trap):
+                case ItemFlags f3 when f3.HasFlag(ItemFlags.NeverExclude):
                     return false;
                 default:
                     return false;

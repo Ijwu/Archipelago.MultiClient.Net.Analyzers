@@ -30,10 +30,11 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
-            context.RegisterSyntaxNodeAction(AnalyzeSwitch, SyntaxKind.SwitchStatement);
+            context.RegisterSyntaxNodeAction(AnalyzeSwitchStatement, SyntaxKind.SwitchStatement);
+            context.RegisterSyntaxNodeAction(AnalyzeSwitchExpression, SyntaxKind.SwitchExpression);
         }
 
-        private void AnalyzeSwitch(SyntaxNodeAnalysisContext context)
+        private void AnalyzeSwitchStatement(SyntaxNodeAnalysisContext context)
         {
             // analyze the switch statement for any cases which compare directly to the ItemFlags enum
             SwitchStatementSyntax syntax = (SwitchStatementSyntax)context.Node;
@@ -43,19 +44,45 @@ namespace Archipelago.MultiClient.Net.Analyzers.Analyzers
                 {
                     if (label.Value is MemberAccessExpressionSyntax identifier)
                     {
-                        TypeInfo typeInfo = context.SemanticModel.GetTypeInfo(identifier);
-                        if (ArchipelagoTypeUtils.IsTypeItemFlags(typeInfo.Type, context.Compilation))
-                        {
-                            // Get value of enum identifier. Value cannot be null if we're in this `if` block.
-                            int identifierValue = (int)context.SemanticModel.GetConstantValue(identifier).Value!;
-
-                            // If value equals 0 then it is `ItemFlags.None`
-                            if (identifierValue != 0)
-                            {
-                                context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, label.GetLocation()));
-                            }
-                        }
+                        AnalyzeConstantMemberComparison(context, label.GetLocation(), identifier);
                     }
+                }
+            }
+        }
+
+        private void AnalyzeSwitchExpression(SyntaxNodeAnalysisContext context)
+        {
+            SwitchExpressionSyntax syntax = (SwitchExpressionSyntax)context.Node;
+            int i = syntax.Kind() switch
+            {
+                SyntaxKind.AbstractKeyword => 0,
+                SyntaxKind k when (int)k > 50 => 2,
+                _ => 1
+            };
+            foreach (SwitchExpressionArmSyntax arm in syntax.Arms)
+            {
+                if (arm.Pattern is ConstantPatternSyntax { Expression: MemberAccessExpressionSyntax ma } cp)
+                {
+                    AnalyzeConstantMemberComparison(context, cp.GetLocation(), ma);
+                }
+            }
+        }
+
+        private void AnalyzeConstantMemberComparison(
+            SyntaxNodeAnalysisContext context,
+            Location warningScope,
+            MemberAccessExpressionSyntax identifier)
+        {
+            TypeInfo typeInfo = context.SemanticModel.GetTypeInfo(identifier);
+            if (ArchipelagoTypeUtils.IsTypeItemFlags(typeInfo.Type, context.Compilation))
+            {
+                // Get value of enum identifier. Value cannot be null if we're in this `if` block.
+                int identifierValue = (int)context.SemanticModel.GetConstantValue(identifier).Value!;
+
+                // If value equals 0 then it is `ItemFlags.None`
+                if (identifierValue != 0)
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(NoItemFlagsComparisonsInSwitchCaseConstants, warningScope));
                 }
             }
         }
