@@ -91,8 +91,8 @@ switch (itemFlag)
 ItemFlags i = ItemFlags.Advancement;
 switch (i)
 {
-    case var f when f.HasFlag(ItemFlags.Advancement):
-    case var f1 when f1.HasFlag(ItemFlags.Trap):
+    case ItemFlags f when f.HasFlag(ItemFlags.Advancement):
+    case ItemFlags f when f1.HasFlag(ItemFlags.Trap):
         return true;
     default:
         return false;
